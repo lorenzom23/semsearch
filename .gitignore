@@ -1,0 +1,27 @@
+# Markdown files
+*.md
+
+# Build directories
+build/
+cmake-build-*/
+out/
+
+# Generated data
+data/
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+_deps/
+Makefile
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
