@@ -1,0 +1,23 @@
+name: C++ CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-test:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: install
+      run: sudo apt update && sudo apt install -y cmake build-essential
+    - name: cmake 
+      run: cmake -S . -B build
+    - name: build
+      run: cmake --build build -j
+    - name: test
+      run: ctest --test-dir build --output-on-failure
