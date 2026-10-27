@@ -11,7 +11,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-# Library target (explicit sources, no file(GLOB)).
+# Library target (explicit sources, no file(GLOB))
 add_library(semsearch_lib
     src/index.cpp
     src/search.cpp
@@ -19,7 +19,11 @@ add_library(semsearch_lib
 target_include_directories(semsearch_lib PUBLIC src)
 target_compile_options(semsearch_lib PRIVATE -Wall -Wextra -Wpedantic)
 
-# CLI executable.
+# CLI executable
 add_executable(semsearch src/main.cpp)
 target_link_libraries(semsearch PRIVATE semsearch_lib)
 target_compile_options(semsearch PRIVATE -Wall -Wextra -Wpedantic)
+
+# Enable testing
+enable_testing()
+add_subdirectory(test)
