@@ -27,3 +27,4 @@ target_compile_options(semsearch PRIVATE -Wall -Wextra -Wpedantic)
 # Enable testing
 enable_testing()
 add_subdirectory(test)
+add_subdirectory(benchmark)
