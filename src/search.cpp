@@ -6,6 +6,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <cstring>
+#include <cmath>
+#include <thread>
 
 namespace semsearch {
 
@@ -83,9 +85,13 @@ const float* Index::vector(uint32_t i) const {
 }
 
 std::vector<SearchResult> Index::search(const float* query, uint32_t k_best_results) const {
-    std::vector<SearchResult> results;
+    return search_range(query, k_best_results, 0, header.count);
+}
 
-    for (uint32_t i = 0; i < header.count; ++i){
+std::vector<SearchResult> Index::search_range(const float* query, uint32_t k_best_results, uint32_t start, uint32_t end) const {
+  std::vector<SearchResult> results;
+
+    for (uint32_t i = start; i < end; ++i){
         const SearchResult& result = {i, dot_product(query, vector(i), header.dim)};
         // Insert the result in the correct position
         const auto it = std::lower_bound(results.begin(), results.end(), result, 
@@ -97,7 +103,47 @@ std::vector<SearchResult> Index::search(const float* query, uint32_t k_best_resu
             results.pop_back(); 
         }
     }
+
     return results;
 }
+
+std::vector<SearchResult> Index::search_mt(const float* query, uint32_t k_best_results, uint32_t thread_count) const {
+    // Split operations on different threads
+    uint32_t per_threads = static_cast<uint32_t>(header.count / thread_count);
+
+    // Threads, each one writes into its own slot
+    std::vector<std::thread> threads;
+    std::vector<std::vector<SearchResult>> partial_results(thread_count);
+    for (uint32_t i = 0; i < thread_count; ++i){
+        uint32_t start = i * per_threads;
+        // Last takes also leftover
+        uint32_t end = (i == thread_count - 1) ? header.count : (i + 1) * per_threads;
+        threads.push_back(std::thread([this, i, query, k_best_results, start, end, &partial_results]() {
+            partial_results[i] = search_range(query, k_best_results, start, end);
+        }));
+    }
+
+    // Wait all of them
+    for (auto& t : threads) {
+        t.join();
+    }
+
+    // Merge results
+    std::vector<SearchResult> merged;
+    for (const auto& partial : partial_results) {
+        merged.insert(merged.end(), partial.begin(), partial.end());
+    }
+
+    std::sort(merged.begin(), merged.end(), [](const SearchResult& a, const SearchResult& b) {
+        return a.score > b.score;
+    });
+    if (merged.size() > k_best_results) {
+        merged.resize(k_best_results);
+    }
+
+    return merged;
+}
+
+
 
 } // namespace semsearch

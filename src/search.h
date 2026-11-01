@@ -29,6 +29,8 @@ public:
 
     // Gets the best k results
     std::vector<SearchResult> search(const float* query, uint32_t k) const;
+    std::vector<SearchResult> search_mt(const float* query, uint32_t k,  uint32_t thread_count) const;
+
 
 private:
     Header header{};
@@ -37,6 +39,9 @@ private:
     int fd            = -1;
     size_t file_size  = 0;
     const float* data = nullptr; 
+
+    std::vector<SearchResult> search_range(const float* query, uint32_t k_best_results, uint32_t start, uint32_t end) const;
+
 };
 
 } // namespace semsearch

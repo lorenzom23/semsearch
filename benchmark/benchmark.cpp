@@ -10,9 +10,22 @@
 
 uint32_t constexpr test_queries = 100;
 
+std::chrono::microseconds get_median(const std::vector<std::chrono::microseconds>& times) {
+    if (test_queries % 2 != 0) {
+        return times[test_queries / 2];
+    } else {
+        return (times[(test_queries / 2) - 1] + times[test_queries / 2]) / 2;
+    }
+}
+
+std::chrono::microseconds get_p95(const std::vector<std::chrono::microseconds>& times) {
+    size_t p95_index = static_cast<size_t>(std::round(0.95 * (test_queries - 1)));
+    return times[p95_index];
+}
+
 void execute_test(const std::string& file_path, uint32_t count, uint32_t dim) {
     // Generates the data
-    std::filesystem::path path {file_path}; 
+    std::filesystem::path path {file_path};
     if (!std::filesystem::exists(path)){
         semsearch::generateRandomIndex(path.c_str(), count, dim);
     }
@@ -27,7 +40,9 @@ void execute_test(const std::string& file_path, uint32_t count, uint32_t dim) {
         queries.push_back(idx.vector(random_index));
     }
 
-    // Execute query
+    std::cout << "=== " << count << " vectors ===" << std::endl;
+
+    // Execute query (sequential)
     std::vector<std::chrono::microseconds> times;
     for (const auto& query : queries){
         auto start = std::chrono::steady_clock::now();
@@ -35,23 +50,33 @@ void execute_test(const std::string& file_path, uint32_t count, uint32_t dim) {
         auto end = std::chrono::steady_clock::now();
         times.push_back(std::chrono::duration_cast<std::chrono::microseconds>(end - start));
     }
-
-    // Statistics
-    std::chrono::microseconds median;
-    std::chrono::microseconds p95;
     std::sort(times.begin(), times.end());
-    if (test_queries % 2 != 0) {
-        median = times[test_queries / 2];
-    } else {
-        median = (times[(test_queries / 2) - 1] + times[test_queries / 2]) / 2;
+    std::cout << "  sequential     : median=" << get_median(times).count()
+               << "us  p95=" << get_p95(times).count() << "us" << std::endl;
+
+    // Execute query mt (4 threads)
+    times.clear();
+    for (const auto& query : queries){
+        auto start = std::chrono::steady_clock::now();
+        auto result = idx.search_mt(query, 10, 4);
+        auto end = std::chrono::steady_clock::now();
+        times.push_back(std::chrono::duration_cast<std::chrono::microseconds>(end - start));
     }
+    std::sort(times.begin(), times.end());
+    std::cout << "  mt (4 threads) : median=" << get_median(times).count()
+               << "us  p95=" << get_p95(times).count() << "us" << std::endl;
 
-    size_t p95_index = static_cast<size_t>(std::round(0.95 * (test_queries - 1)));
-    p95 = times[p95_index];
-
-    std::cout << "Vectors: " << count << std::endl;
-    std::cout << "Median: " << median.count() << " us" << std::endl;
-    std::cout << "P95: "    << p95.count()    << " us" << std::endl;
+    // Execute query mt (8 threads)
+    times.clear();
+    for (const auto& query : queries){
+        auto start = std::chrono::steady_clock::now();
+        auto result = idx.search_mt(query, 10, 8);
+        auto end = std::chrono::steady_clock::now();
+        times.push_back(std::chrono::duration_cast<std::chrono::microseconds>(end - start));
+    }
+    std::sort(times.begin(), times.end());
+    std::cout << "  mt (8 threads) : median=" << get_median(times).count()
+               << "us  p95=" << get_p95(times).count() << "us" << std::endl;
 }
 
 int main(){
@@ -60,5 +85,4 @@ int main(){
 
     // Execute 1M test
     execute_test("data/index_1M.bin", 1000000, 384);
-
 }
