@@ -1,9 +1,9 @@
 #include <cstdio>
 
-#include "index.h"
+#include "indexer.h"
 
 int main() {
-    semsearch::generateRandomIndex("data/index.bin", 100000, 384);
+    semsearch::index_directory("data", "data/index.bin", "data/meta.json");
     std::puts("semsearch: ok");
     return 0;
 }

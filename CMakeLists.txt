@@ -15,6 +15,7 @@ endif()
 add_library(semsearch_lib
     src/index.cpp
     src/search.cpp
+    src/indexer.cpp
 )
 target_include_directories(semsearch_lib PUBLIC src)
 target_compile_options(semsearch_lib PRIVATE -Wall -Wextra -Wpedantic)
