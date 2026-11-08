@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace semsearch {
 
@@ -16,5 +17,8 @@ struct Header {
 static_assert(sizeof(Header) == 32);
 
 void generateRandomIndex(const std::string& path, uint32_t count, uint32_t dim = 384);
+
+// Writes header + vectors (flat, count * dim floats) to path
+void writeIndex(const std::string& path, const std::vector<float>& vectors, uint32_t dim);
 
 } // namespace semsearch

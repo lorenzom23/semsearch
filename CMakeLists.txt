@@ -11,13 +11,42 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
+include(FetchContent)
+
+# ONNX Runtime
+FetchContent_Declare(
+    onnxruntime
+    URL https://github.com/microsoft/onnxruntime/releases/download/v1.31.1/onnxruntime-linux-x64-1.31.1.tgz
+)
+FetchContent_MakeAvailable(onnxruntime)
+set(ONNXRUNTIME_ROOT ${onnxruntime_SOURCE_DIR})
+
+# SentencePiece
+FetchContent_Declare(
+    sentencepiece
+    GIT_REPOSITORY https://github.com/google/sentencepiece.git
+    GIT_TAG        v0.2.2
+)
+FetchContent_MakeAvailable(sentencepiece)
+set(CMAKE_BUILD_RPATH ${ONNXRUNTIME_ROOT}/lib)
+
 # Library target (explicit sources, no file(GLOB))
 add_library(semsearch_lib
     src/index.cpp
     src/search.cpp
     src/indexer.cpp
+    src/embedder.cpp
 )
-target_include_directories(semsearch_lib PUBLIC src)
+target_include_directories(semsearch_lib PUBLIC
+    src
+    ${ONNXRUNTIME_ROOT}/include
+    ${sentencepiece_SOURCE_DIR}/src
+    ${sentencepiece_SOURCE_DIR}
+)
+target_link_libraries(semsearch_lib PUBLIC
+    ${ONNXRUNTIME_ROOT}/lib/libonnxruntime.so
+    sentencepiece-static
+)
 target_compile_options(semsearch_lib PRIVATE -Wall -Wextra -Wpedantic)
 
 # CLI executable

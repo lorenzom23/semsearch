@@ -43,4 +43,22 @@ void generateRandomIndex(const std::string& path, uint32_t count, uint32_t dim) 
     }
 }
 
+void writeIndex(const std::string& path, const std::vector<float>& vectors, uint32_t dim) {
+    std::filesystem::path p(path);
+    if (p.has_parent_path()) {
+        std::filesystem::create_directories(p.parent_path());
+    }
+
+    Header h{};
+    std::memcpy(h.magic, "SEM1", 4);
+    h.version = 1;
+    h.dim = dim;
+    h.count = vectors.size()/ dim;
+
+    std::ofstream out(path, std::ios::binary);
+    out.write(reinterpret_cast<const char*>(&h), sizeof(h));
+    
+    out.write(reinterpret_cast<const char*>(vectors.data()), vectors.size() * sizeof(float));
+}
+
 } // namespace semsearch

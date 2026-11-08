@@ -1,5 +1,6 @@
 #include "indexer.h"
 #include "index.h"
+#include "embedder.h"
 
 #include <algorithm>
 #include <filesystem>
@@ -14,8 +15,8 @@ namespace semsearch {
 
 const std::vector<std::string> allowed_extensions = {".txt", ".md", ".rst"};
 
-uint32_t constexpr chunk_size    = 250; // words per chunk
-uint32_t constexpr chunk_overlap = 25;  // words of overlap between chunks
+uint32_t constexpr chunk_size    = 80; // words per chunk
+uint32_t constexpr chunk_overlap = 10;  // words of overlap between chunks
 
 // A word with its byte offset in the original text
 struct Word {
@@ -120,8 +121,16 @@ void write_meta(const std::string& meta_path, const std::vector<Chunk>& chunks) 
     file << "]";
 }
 
-void write_index(const std::string& index_path, const std::vector<Chunk>& chunks) {
-    generateRandomIndex(index_path, static_cast<uint32_t>(chunks.size()));
+void write_index(const std::string& index_path, const std::vector<Chunk>& chunks, Embedder& embedder) {
+    std::vector<float> vectors;
+    vectors.reserve(chunks.size() * dim);    
+    for (const auto& chunk : chunks){
+        const auto v = embedder.embed(chunk.text);
+        vectors.insert(vectors.end(), v.begin(), v.end());
+    }
+    writeIndex(index_path, vectors, dim);
+
+    // generateRandomIndex(index_path, static_cast<uint32_t>(chunks.size()));
 }
 
 void index_directory(const std::string& folder_path, const std::string& index_path, const std::string& meta_path) {
@@ -153,8 +162,11 @@ void index_directory(const std::string& folder_path, const std::string& index_pa
         std::cerr << "Error: " << ex.what() << std::endl;
     }
 
+    // Load model
+    Embedder embedder("data/model/model.onnx", "data/model/sentencepiece.bpe.model");
+
     write_meta(meta_path, all_chunks);
-    write_index(index_path, all_chunks);
+    write_index(index_path, all_chunks, embedder);
 }
 
 }// namespace semsearch
