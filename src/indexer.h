@@ -14,7 +14,7 @@ struct Chunk {
 
 // Gets into folder_path recursively 
 // and writes index_path (index.bin) + meta_path (meta.json)
-void index_directory(const std::string& folder_path,
+std::vector<Chunk> index_directory(const std::string& folder_path,
                      const std::string& index_path,
                      const std::string& meta_path);
 

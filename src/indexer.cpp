@@ -133,7 +133,7 @@ void write_index(const std::string& index_path, const std::vector<Chunk>& chunks
     // generateRandomIndex(index_path, static_cast<uint32_t>(chunks.size()));
 }
 
-void index_directory(const std::string& folder_path, const std::string& index_path, const std::string& meta_path) {
+std::vector<Chunk> index_directory(const std::string& folder_path, const std::string& index_path, const std::string& meta_path) {
     std::vector<Chunk> all_chunks;
     fs::path fs_path {folder_path};
 
@@ -167,6 +167,8 @@ void index_directory(const std::string& folder_path, const std::string& index_pa
 
     write_meta(meta_path, all_chunks);
     write_index(index_path, all_chunks, embedder);
+
+    return all_chunks;
 }
 
 }// namespace semsearch
