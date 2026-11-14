@@ -1,0 +1,5 @@
+When a Linux server runs out of disk space, services start failing in strange ways: databases refuse to write, logs stop and package updates break halfway. The first command to run is df -h, which shows how full every mounted filesystem is in a human readable format.
+
+To find out what is using the space, run du -sh on the main directories, for example /var, /home and /tmp, and then go deeper into the biggest one. Old log files in /var/log and forgotten backups are the most common culprits. The journalctl --vacuum-size option can shrink the systemd journal to a fixed size.
+
+Sometimes df reports a full disk but du cannot find the files. This usually happens when a process still holds a deleted file open: the space is released only when the process closes it. The command lsof +L1 lists those files, and restarting the service frees the space.
