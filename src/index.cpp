@@ -43,10 +43,9 @@ void generateRandomIndex(const std::string& path, uint32_t count, uint32_t dim) 
     }
 }
 
-void writeIndex(const std::string& path, const std::vector<float>& vectors, uint32_t dim) {
-    std::filesystem::path p(path);
-    if (p.has_parent_path()) {
-        std::filesystem::create_directories(p.parent_path());
+void writeIndex(const std::filesystem::path& path, const std::vector<float>& vectors, uint32_t dim) {
+    if (path.has_parent_path()) {
+        std::filesystem::create_directories(path.parent_path());
     }
 
     Header h{};

@@ -87,7 +87,6 @@ std::vector<Chunk> chunk_text(const std::string& text, const std::string& source
             body += words[i].text;
         }
 
-        // Chuncks
         uint64_t start_offset = words[start].offset;
         uint64_t end_offset = words[end - 1].offset + words[end - 1].text.size(); 
         uint64_t length = end_offset - start_offset;
@@ -101,8 +100,17 @@ std::vector<Chunk> chunk_text(const std::string& text, const std::string& source
     return chunks;
 }
 
-void write_meta(const std::string& meta_path, const std::vector<Chunk>& chunks) {
+void write_meta(const std::filesystem::path& meta_path, const std::vector<Chunk>& chunks) {
+    if (meta_path.has_parent_path()) {
+        fs::create_directories(meta_path.parent_path());
+    }
+
     std::ofstream file(meta_path);
+    if (!file.is_open()) {
+        std::cerr << "Error: could not write " << meta_path << std::endl;
+        return;
+    }
+
     nlohmann::json meta = nlohmann::json::array();
     
     for (size_t i = 0; i < chunks.size(); ++i) {
@@ -116,7 +124,7 @@ void write_meta(const std::string& meta_path, const std::vector<Chunk>& chunks) 
     file << meta.dump(2);
 }
 
-void write_index(const std::string& index_path, const std::vector<Chunk>& chunks, Embedder& embedder) {
+void write_index(const std::filesystem::path& index_path, const std::vector<Chunk>& chunks, Embedder& embedder) {
     std::vector<float> vectors;
     vectors.reserve(chunks.size() * dim);    
     for (const auto& chunk : chunks){
@@ -124,18 +132,14 @@ void write_index(const std::string& index_path, const std::vector<Chunk>& chunks
         vectors.insert(vectors.end(), v.begin(), v.end());
     }
     writeIndex(index_path, vectors, dim);
-
-    // generateRandomIndex(index_path, static_cast<uint32_t>(chunks.size()));
 }
 
-void index_directory(const std::string& folder_path, const std::string& index_path, const std::string& meta_path) {
+void index_directory(const std::filesystem::path& folder_path, const std::filesystem::path& index_path, const std::filesystem::path& meta_path) {
     std::vector<Chunk> all_chunks;
-    fs::path fs_path {folder_path};
-
     try {
 
         auto end = fs::recursive_directory_iterator();
-        for (auto it = fs::recursive_directory_iterator(fs_path); it != end; ++it) {
+        for (auto it = fs::recursive_directory_iterator(folder_path); it != end; ++it) {
             auto const& entry = *it;
 
             if (entry.is_directory() && is_hidden(entry.path())) {
@@ -146,9 +150,9 @@ void index_directory(const std::string& folder_path, const std::string& index_pa
             if (entry.is_regular_file() && !is_hidden(entry.path()) && has_allowed_extension(entry.path())) {
                 // Read the file
                 std::string text = read_file(entry.path());
-                
 
-                std::vector<Chunk> chunks = chunk_text(text, entry.path().string());
+                const std::string source_file = fs::absolute(entry.path()).lexically_normal().string();
+                std::vector<Chunk> chunks = chunk_text(text, source_file);
                 all_chunks.insert(all_chunks.end(), chunks.begin(), chunks.end());
             }
         }
@@ -164,9 +168,9 @@ void index_directory(const std::string& folder_path, const std::string& index_pa
     write_index(index_path, all_chunks, embedder);
 }
 
-std::vector<Chunk> load_meta(const std::string& meta_path){
+std::vector<Chunk> load_meta(const std::filesystem::path& meta_path){
     std::vector<Chunk> result;
-    std::ifstream file(meta_path);
+    std::ifstream file(meta_path.c_str());
 
     if (!file.is_open()) {
         std::cerr << "Error: could not open " << meta_path << std::endl;
