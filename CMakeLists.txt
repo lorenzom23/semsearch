@@ -30,6 +30,13 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(sentencepiece)
 set(CMAKE_BUILD_RPATH ${ONNXRUNTIME_ROOT}/lib)
 
+# nlohmann/json
+FetchContent_Declare(
+    json
+    URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz
+)
+FetchContent_MakeAvailable(json)
+
 # Library target (explicit sources, no file(GLOB))
 add_library(semsearch_lib
     src/index.cpp
@@ -46,6 +53,7 @@ target_include_directories(semsearch_lib PUBLIC
 target_link_libraries(semsearch_lib PUBLIC
     ${ONNXRUNTIME_ROOT}/lib/libonnxruntime.so
     sentencepiece-static
+    nlohmann_json::nlohmann_json
 )
 target_compile_options(semsearch_lib PRIVATE -Wall -Wextra -Wpedantic)
 

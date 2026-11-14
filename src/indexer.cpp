@@ -9,13 +9,15 @@
 #include <vector>
 #include <iostream>
 
+#include <nlohmann/json.hpp>
+
 namespace fs = std::filesystem;
 
 namespace semsearch {
 
 const std::vector<std::string> allowed_extensions = {".txt", ".md", ".rst"};
 
-uint32_t constexpr chunk_size    = 80; // words per chunk
+uint32_t constexpr chunk_size    = 80;  // words per chunk
 uint32_t constexpr chunk_overlap = 10;  // words of overlap between chunks
 
 // A word with its byte offset in the original text
@@ -25,7 +27,8 @@ struct Word {
 };
 
 bool is_hidden(const std::filesystem::path& path) {
-    return !path.empty() && path.c_str()[0] == '.';
+    const std::string path_string = path.filename().string();
+    return path_string.starts_with('.');
 }
 
 bool has_allowed_extension(const std::filesystem::path& path) {
@@ -84,7 +87,11 @@ std::vector<Chunk> chunk_text(const std::string& text, const std::string& source
             body += words[i].text;
         }
 
-        chunks.push_back({body, source_file, words[start].offset});
+        // Chuncks
+        uint64_t start_offset = words[start].offset;
+        uint64_t end_offset = words[end - 1].offset + words[end - 1].text.size(); 
+        uint64_t length = end_offset - start_offset;
+        chunks.push_back({body, source_file, start_offset, length});
 
         if (end == words.size()) {
             break;
@@ -94,31 +101,19 @@ std::vector<Chunk> chunk_text(const std::string& text, const std::string& source
     return chunks;
 }
 
-std::string escape_json(const std::string& text) {
-    std::string result;
-    for (char c : text) {
-        if (c == '"' || c == '\\') {
-            result += '\\';
-        }
-        result += c;
-    }
-    return result;
-}
-
 void write_meta(const std::string& meta_path, const std::vector<Chunk>& chunks) {
     std::ofstream file(meta_path);
-
-    file << "[";
-    for (uint32_t i = 0; i < chunks.size(); ++i) {
-        const Chunk& chunk = chunks[i];
-        if (i > 0) {
-            file << ",";
-        }
-        file << "{\"id\": " << i
-             << ", \"file\": \"" << escape_json(chunk.source_file) << "\""
-             << ", \"offset\": " << chunk.offset << "}";
+    nlohmann::json meta = nlohmann::json::array();
+    
+    for (size_t i = 0; i < chunks.size(); ++i) {
+        meta.push_back({
+            {"id",     i},
+            {"file",   chunks[i].source_file},
+            {"offset", chunks[i].offset},
+            {"length", chunks[i].length},
+        });
     }
-    file << "]";
+    file << meta.dump(2);
 }
 
 void write_index(const std::string& index_path, const std::vector<Chunk>& chunks, Embedder& embedder) {

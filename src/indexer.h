@@ -10,6 +10,7 @@ struct Chunk {
     std::string text;
     std::string source_file;
     uint64_t    offset;
+    uint64_t    length;
 };
 
 // Gets into folder_path recursively 
