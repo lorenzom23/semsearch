@@ -10,9 +10,11 @@
 
 namespace fs = std::filesystem;
 
-constexpr auto index_filename = "index.bin";
-constexpr auto meta_filename  = "meta.json";
-constexpr auto usage = "usage: semsearch index <dir> | semsearch query \"<text>\"";
+constexpr auto index_filename     = "index.bin";
+constexpr auto meta_filename      = "meta.json";
+constexpr auto model_filename     = "model.onnx";
+constexpr auto tokenizer_filename = "sentencepiece.bpe.model";
+constexpr auto usage              = "usage: semsearch index <dir> | semsearch query \"<text>\"";
 
 // Where to store files
 fs::path data_dir() {
@@ -30,14 +32,13 @@ fs::path data_dir() {
     throw std::runtime_error("HOME is not set");
 }
 
-void execute_query(const std::string& query, const fs::path& index_path, const fs::path& meta_path) {
+void execute_query(const std::string& query, const fs::path& index_path, const fs::path& meta_path, semsearch::Embedder& embedder) {
     const auto meta = semsearch::load_meta(meta_path);
     if (meta.empty()) {
         std::cerr << "No index found, run: semsearch index <dir>" << std::endl;
         return;
     }
 
-    semsearch::Embedder embedder("data/model/model.onnx", "data/model/sentencepiece.bpe.model");
     semsearch::Index index(index_path.string());
 
     const auto query_embedded = embedder.embed(query);
@@ -58,15 +59,33 @@ int main(int argc, char* argv[]) {
     }
 
     const std::string command = argv[1];
-    const fs::path dir = data_dir();
-
-    if (command == "index"){
-        semsearch::index_directory(argv[2], dir / index_filename, dir / meta_filename);
-    } else if (command == "query"){
-        execute_query(argv[2], dir / index_filename, dir / meta_filename);
-    } else {
+    if (command != "index" && command != "query") {
         std::cerr << "Unknown command: " << command << std::endl
                   << usage << std::endl;
+        return 1;
+    }
+
+    try {
+        const fs::path dir = data_dir();
+        const fs::path model_path = dir / "model";
+
+        if (!fs::exists(model_path / model_filename) ||
+            !fs::exists(model_path / tokenizer_filename)) {
+            std::cerr << "Model not found in " << model_path << std::endl
+                      << "Run: scripts/model.sh" << std::endl;
+            return 1;
+        }
+
+        semsearch::Embedder embedder((model_path / model_filename).string(),
+                                     (model_path / tokenizer_filename).string());
+
+        if (command == "index") {
+            semsearch::index_directory(argv[2], dir / index_filename, dir / meta_filename, embedder);
+        } else {
+            execute_query(argv[2], dir / index_filename, dir / meta_filename, embedder);
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
 

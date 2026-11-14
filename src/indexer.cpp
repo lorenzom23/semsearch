@@ -134,7 +134,7 @@ void write_index(const std::filesystem::path& index_path, const std::vector<Chun
     writeIndex(index_path, vectors, dim);
 }
 
-void index_directory(const std::filesystem::path& folder_path, const std::filesystem::path& index_path, const std::filesystem::path& meta_path) {
+void index_directory(const std::filesystem::path& folder_path, const std::filesystem::path& index_path, const std::filesystem::path& meta_path, Embedder& embedder) {
     std::vector<Chunk> all_chunks;
     try {
 
@@ -160,9 +160,6 @@ void index_directory(const std::filesystem::path& folder_path, const std::filesy
     } catch (fs::filesystem_error const& ex) {
         std::cerr << "Error: " << ex.what() << std::endl;
     }
-
-    // Load model
-    Embedder embedder("data/model/model.onnx", "data/model/sentencepiece.bpe.model");
 
     write_meta(meta_path, all_chunks);
     write_index(index_path, all_chunks, embedder);
