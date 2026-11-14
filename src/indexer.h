@@ -15,8 +15,11 @@ struct Chunk {
 
 // Gets into folder_path recursively 
 // and writes index_path (index.bin) + meta_path (meta.json)
-std::vector<Chunk> index_directory(const std::string& folder_path,
+void index_directory(const std::string& folder_path,
                      const std::string& index_path,
                      const std::string& meta_path);
+
+std::vector<Chunk> load_meta(const std::string& meta_path);
+std::string read_chunk_text(const Chunk& chunk);
 
 } // namespace semsearch

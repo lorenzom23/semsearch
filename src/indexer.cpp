@@ -128,7 +128,7 @@ void write_index(const std::string& index_path, const std::vector<Chunk>& chunks
     // generateRandomIndex(index_path, static_cast<uint32_t>(chunks.size()));
 }
 
-std::vector<Chunk> index_directory(const std::string& folder_path, const std::string& index_path, const std::string& meta_path) {
+void index_directory(const std::string& folder_path, const std::string& index_path, const std::string& meta_path) {
     std::vector<Chunk> all_chunks;
     fs::path fs_path {folder_path};
 
@@ -162,8 +162,55 @@ std::vector<Chunk> index_directory(const std::string& folder_path, const std::st
 
     write_meta(meta_path, all_chunks);
     write_index(index_path, all_chunks, embedder);
+}
 
-    return all_chunks;
+std::vector<Chunk> load_meta(const std::string& meta_path){
+    std::vector<Chunk> result;
+    std::ifstream file(meta_path);
+
+    if (!file.is_open()) {
+        std::cerr << "Error: could not open " << meta_path << std::endl;
+        return result;
+    }
+
+    try {
+        nlohmann::json data = nlohmann::json::parse(file);
+
+        for (const auto& item : data) {
+            result.push_back({
+                .source_file = item.value("file", std::string{}),
+                .offset      = item.value("offset", uint64_t{0}),
+                .length      = item.value("length", uint64_t{0}),
+            });
+        }
+
+    } catch (const nlohmann::json::parse_error& e) {
+        std::cerr << "JSON syntax error: " << e.what() << std::endl;
+    } catch (const nlohmann::json::exception& e) {
+        std::cerr << "JSON access error: " << e.what() << std::endl;
+    }
+
+    return result;
+}
+
+std::string read_chunk_text(const Chunk& chunk){
+    std::string result;
+
+    if (chunk.source_file.empty()){
+        return result;
+    }
+
+    std::ifstream file(chunk.source_file, std::ios::binary);
+    if (!file.is_open()) {
+        std::cerr << "Error: could not open " << chunk.source_file << std::endl;
+        return result;
+    }
+
+    file.seekg(chunk.offset, std::ios::beg);
+    result.resize(chunk.length);
+    file.read(result.data(), chunk.length);
+    result.resize(file.gcount()); // file may be shorter than expected
+    return result;
 }
 
 }// namespace semsearch

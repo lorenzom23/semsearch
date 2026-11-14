@@ -8,7 +8,7 @@
 #include "search.h"
 
 int main() {
-    const auto chunks = semsearch::index_directory("search_demo", "data/index.bin", "data/meta.json");
+    semsearch::index_directory("search_demo", "data/index.bin", "data/meta.json");
 
     semsearch::Embedder embedder("data/model/model.onnx", "data/model/sentencepiece.bpe.model");
     semsearch::Index index("data/index.bin");
@@ -18,15 +18,18 @@ int main() {
         "relaxing on the bank watching the water",
     };
 
-    for (const auto& text : queries) {
-        std::cout << "Query: " << text << std::endl;
-        const auto query = embedder.embed(text);
+    const auto meta = semsearch::load_meta("data/meta.json");
+
+    for (const auto& q : queries) {
+        std::cout << "Query: " << q << std::endl;
+        const auto query = embedder.embed(q);
         const auto results = index.search(query.data(), 3);
 
         for (const auto& r : results) {
+            const std::string text = semsearch::read_chunk_text(meta[r.id]);
             std::cout << "   id " << r.id
                       << "  score " << r.score << std::endl
-                      << "   " << chunks[r.id].source_file << ": " << chunks[r.id].text << std::endl;
+                      << "   " << meta[r.id].source_file << ": " << text << std::endl;
         }
     }
 
